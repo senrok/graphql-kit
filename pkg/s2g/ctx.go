@@ -14,6 +14,7 @@ type ModelField struct {
 	Name            string
 	FilterOperators []FilterOperator
 	Scalar          string
+	SortScalar      string
 }
 
 type FilterOperator struct {
@@ -29,9 +30,10 @@ func (c Ctx) ToTplCtx() ModelFilterTplCtx {
 	}
 	for _, field := range c.ModelField {
 		ftc := FieldFilterTplCtx{
-			ModelName: c.ModelName,
-			FieldName: field.Name,
-			Operators: nil,
+			ModelName:  c.ModelName,
+			FieldName:  field.Name,
+			SortScalar: "SortDirection",
+			Operators:  nil,
 		}
 		for _, operator := range field.FilterOperators {
 			o := Operator{
@@ -93,6 +95,28 @@ var (
 			{
 				Name:            "_in",
 				ScalarGenerator: NullableListGenerator,
+				TagGenerator:    DefaultTagGenerator,
+			},
+		},
+		"range": []FilterOperator{
+			{
+				Name:            "_gt",
+				ScalarGenerator: DefaultGenerator,
+				TagGenerator:    DefaultTagGenerator,
+			},
+			{
+				Name:            "_gte",
+				ScalarGenerator: DefaultGenerator,
+				TagGenerator:    DefaultTagGenerator,
+			},
+			{
+				Name:            "_lt",
+				ScalarGenerator: DefaultGenerator,
+				TagGenerator:    DefaultTagGenerator,
+			},
+			{
+				Name:            "_lte",
+				ScalarGenerator: DefaultGenerator,
 				TagGenerator:    DefaultTagGenerator,
 			},
 		},

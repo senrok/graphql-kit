@@ -20,21 +20,19 @@ func RemoveStringQuote(s string) string {
 	return s
 }
 
-func NewGenerator(model interface{}) generator {
-	g := generator{
-		Ctx{},
-	}
-	rt := reflect.TypeOf(model)
-	for rt.Kind() == reflect.Ptr ||
-		rt.Kind() == reflect.Interface {
-		rt = rt.Elem()
-	}
-	g.Ctx.ModelName = rt.Name()
-
+func generateFields(rt reflect.Type) []ModelField {
+	var mf []ModelField
 	for i := 0; i < rt.NumField(); i++ {
 		f := ModelField{}
 		field := rt.Field(i)
 		f.Name = field.Name
+
+		if value, ok := field.Tag.Lookup("s2g"); ok {
+			if strings.Contains(value, "nested") {
+				mf = append(mf, generateFields(field.Type)...)
+				continue
+			}
+		}
 
 		// TODO: derives primitive type by reflect
 		if value, ok := field.Tag.Lookup("filterScalar"); !ok {
@@ -51,9 +49,26 @@ func NewGenerator(model interface{}) generator {
 				}
 			}
 		}
-		g.Ctx.ModelField = append(g.Ctx.ModelField, f)
+		mf = append(mf, f)
 	}
-	return g
+	return mf
+}
+
+func newGenerator(rt reflect.Type) *generator {
+	g := generator{}
+
+	for rt.Kind() == reflect.Ptr ||
+		rt.Kind() == reflect.Interface {
+		rt = rt.Elem()
+	}
+	g.Ctx.ModelName = rt.Name()
+	g.Ctx.ModelField = generateFields(rt)
+	return &g
+}
+
+func NewGenerator(model interface{}) *generator {
+	rt := reflect.TypeOf(model)
+	return newGenerator(rt)
 }
 
 func (g generator) Generate() (string, error) {
@@ -73,6 +88,16 @@ func (g generator) Generate() (string, error) {
 	}
 
 	tpl, err = template.ParseFiles("./model_filter.tpl")
+	if err != nil {
+		return "", err
+	}
+
+	err = tpl.Execute(&sb, c)
+	if err != nil {
+		return "", err
+	}
+
+	tpl, err = template.ParseFiles("./model_sort.tpl")
 	if err != nil {
 		return "", err
 	}

@@ -3,11 +3,21 @@ package s2g
 import (
 	"fmt"
 	"github.com/stretchr/testify/assert"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"testing"
+	"time"
 )
 
+type DefaultModel struct {
+	ID        primitive.ObjectID `json:"_id,omitempty" bson:"_id,omitempty" odm:"primaryID" gqlgen:"id" filter:"comparable" filter:"comparable" filterScalar:"ID" sort:""`
+	CreatedAt time.Time          `json:"createdAt,omitempty" bson:"createdAt,omitempty" odm:"autoCreateTime" gqlgen:"createdAt" filter:"range" filterScalar:"Time" sort:""`
+	UpdatedAt time.Time          `json:"updatedAt,omitempty" bson:"updatedAt,omitempty" odm:"autoUpdateTime" gqlgen:"updatedAt" filter:"range" filterScalar:"Time" sort:""`
+	DeletedAt time.Time          `json:"deletedAt,omitempty" bson:"deletedAt,omitempty" odm:"deleteTime" gqlgen:"deletedAt" filter:"range" filterScalar:"Time" sort:""`
+}
+
 type Tenant struct {
-	Name string `bson:"name" filter:"comparable" filterScalar:"String"`
+	DefaultModel `s2g:"nested"`
+	Name         string `bson:"name" filter:"comparable" filterScalar:"String" sort:""`
 }
 
 // input TenantNameFilter {

@@ -9,9 +9,10 @@ type Operator struct {
 }
 
 type FieldFilterTplCtx struct {
-	ModelName string
-	FieldName string
-	Operators []Operator
+	ModelName  string
+	FieldName  string
+	SortScalar string
+	Operators  []Operator
 }
 
 func (f FieldFilterTplCtx) LowerCamelFieldName() string {
