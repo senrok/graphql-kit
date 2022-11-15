@@ -1,6 +1,10 @@
 package s2g
 
 import (
+	"context"
+	"github.com/iancoleman/strcase"
+	"github.com/senrok/yadal"
+	"github.com/senrok/yadal/providers/fs"
 	"reflect"
 	"strings"
 	"text/template"
@@ -26,12 +30,11 @@ func generateFields(rt reflect.Type) []ModelField {
 		f := ModelField{}
 		field := rt.Field(i)
 		f.Name = field.Name
+		f.StructField = field
 
-		if value, ok := field.Tag.Lookup("s2g"); ok {
-			if strings.Contains(value, "nested") {
-				mf = append(mf, generateFields(field.Type)...)
-				continue
-			}
+		if field.Anonymous {
+			mf = append(mf, generateFields(field.Type)...)
+			continue
 		}
 
 		// TODO: derives primitive type by reflect
@@ -48,6 +51,8 @@ func generateFields(rt reflect.Type) []ModelField {
 					f.FilterOperators = append(f.FilterOperators, filters...)
 				}
 			}
+		} else {
+			continue
 		}
 		mf = append(mf, f)
 	}
@@ -71,11 +76,17 @@ func NewGenerator(model interface{}) *generator {
 	return newGenerator(rt)
 }
 
+var fns = template.FuncMap{
+	"last": func(x int, a interface{}) bool {
+		return x == reflect.ValueOf(a).Len()-1
+	},
+}
+
 func (g generator) Generate() (string, error) {
 	sb := strings.Builder{}
 	c := g.ToTplCtx()
 
-	tpl, err := template.ParseFiles("./field_filter.tpl")
+	tpl, err := template.ParseFiles("./tpl/field_filter.tpl")
 	if err != nil {
 		return "", err
 	}
@@ -87,7 +98,7 @@ func (g generator) Generate() (string, error) {
 		}
 	}
 
-	tpl, err = template.ParseFiles("./model_filter.tpl")
+	tpl, err = template.ParseFiles("./tpl/model_filter.tpl")
 	if err != nil {
 		return "", err
 	}
@@ -97,7 +108,17 @@ func (g generator) Generate() (string, error) {
 		return "", err
 	}
 
-	tpl, err = template.ParseFiles("./model_sort.tpl")
+	tpl, err = template.ParseFiles("./tpl/model_fields.tpl")
+	if err != nil {
+		return "", err
+	}
+
+	err = tpl.Execute(&sb, c)
+	if err != nil {
+		return "", err
+	}
+
+	tpl, err = template.ParseFiles("./tpl/model_sort.tpl")
 	if err != nil {
 		return "", err
 	}
@@ -108,4 +129,34 @@ func (g generator) Generate() (string, error) {
 	}
 
 	return sb.String(), nil
+}
+
+type Config struct {
+	Model          interface{}
+	OutputFileName string
+}
+
+func NewBatchGenerator(dir string, configs ...Config) error {
+	acc := fs.NewDriver(fs.Options{Root: dir})
+	op := yadal.NewOperatorFromAccessor(acc)
+
+	for _, config := range configs {
+		rv := reflect.ValueOf(config.Model)
+		rv = reflect.Indirect(rv)
+		rt := rv.Type()
+
+		if config.OutputFileName == "" {
+			config.OutputFileName = strcase.ToKebab(rt.Name()) + ".generated.graphql"
+		}
+		output, err := newGenerator(rt).Generate()
+		if err != nil {
+			return err
+		}
+		obj := op.Object(config.OutputFileName)
+		err = obj.Write(context.TODO(), []byte(output))
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }

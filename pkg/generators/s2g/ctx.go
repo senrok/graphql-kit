@@ -2,6 +2,7 @@ package s2g
 
 import (
 	"fmt"
+	"reflect"
 	"strings"
 )
 
@@ -11,6 +12,7 @@ type Ctx struct {
 }
 
 type ModelField struct {
+	reflect.StructField
 	Name            string
 	FilterOperators []FilterOperator
 	Scalar          string
@@ -30,10 +32,12 @@ func (c Ctx) ToTplCtx() ModelFilterTplCtx {
 	}
 	for _, field := range c.ModelField {
 		ftc := FieldFilterTplCtx{
-			ModelName:  c.ModelName,
-			FieldName:  field.Name,
-			SortScalar: "SortDirection",
-			Operators:  nil,
+			ModelName:      c.ModelName,
+			FieldName:      field.Name,
+			SortScalar:     "SortDirection",
+			CustomTags:     ExportOriginBsonTag(field),
+			OriginBsonName: GetOriginBsonName(field),
+			Operators:      nil,
 		}
 		for _, operator := range field.FilterOperators {
 			o := Operator{
@@ -51,7 +55,20 @@ func (c Ctx) ToTplCtx() ModelFilterTplCtx {
 type TagGenerator func(name string) string
 
 func DefaultTagGenerator(tag string) string {
-	return fmt.Sprintf(`@goTag(key: "bson",value:"%s")`, strings.Replace(tag, "_", "$", 1))
+	return fmt.Sprintf(`@goTag(key: "bson",value:"%s,omitempty")`, strings.Replace(tag, "_", "$", 1))
+}
+
+func GetOriginBsonName(f ModelField) string {
+	if value, ok := f.Tag.Lookup("bson"); ok {
+		return strings.Split(value, ",")[0]
+	}
+	return ""
+}
+func ExportOriginBsonTag(f ModelField) string {
+	if value, ok := f.Tag.Lookup("bson"); ok {
+		return fmt.Sprintf(`@goTag(key: "bson",value:"%s,omitempty")`, strings.Split(value, ",")[0])
+	}
+	return ""
 }
 
 type ScalarGenerator func(scalar string) string
@@ -66,6 +83,20 @@ func NullableListGenerator(scalar string) string {
 
 var (
 	FilterMap = map[string][]FilterOperator{
+		"eq": []FilterOperator{
+			{
+				Name:            "_eq",
+				ScalarGenerator: DefaultGenerator,
+				TagGenerator:    DefaultTagGenerator,
+			},
+		},
+		"elemMatch": []FilterOperator{
+			{
+				Name:            "_elemMatch",
+				ScalarGenerator: DefaultGenerator,
+				TagGenerator:    DefaultTagGenerator,
+			},
+		},
 		"comparable": []FilterOperator{
 			{
 				Name:            "_eq",
@@ -95,6 +126,11 @@ var (
 			{
 				Name:            "_in",
 				ScalarGenerator: NullableListGenerator,
+				TagGenerator:    DefaultTagGenerator,
+			},
+			{
+				Name:            "_regex",
+				ScalarGenerator: DefaultGenerator,
 				TagGenerator:    DefaultTagGenerator,
 			},
 		},
