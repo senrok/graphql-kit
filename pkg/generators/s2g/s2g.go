@@ -2,6 +2,7 @@ package s2g
 
 import (
 	"context"
+	_ "embed"
 	"github.com/iancoleman/strcase"
 	"github.com/senrok/yadal"
 	"github.com/senrok/yadal/providers/fs"
@@ -82,16 +83,16 @@ var fns = template.FuncMap{
 	},
 }
 
-// go:embed ./tpl/field_filter.tpl
+//go:embed tpl/field_filter.tpl
 var fieldFilterTemplate string
 
-// go:embed ./tpl/model_filter.tpl
+//go:embed tpl/model_filter.tpl
 var modelFilterTemplate string
 
-// go:embed ./tpl/model_fields.tpl
+//go:embed tpl/model_fields.tpl
 var modelFieldsTemplate string
 
-// go:embed ./tpl/model_sort.tpl
+//go:embed tpl/model_sort.tpl
 var modelSortTemplate string
 
 func (g generator) Generate() (string, error) {
@@ -155,10 +156,11 @@ func NewBatchGenerator(dir string, configs ...Config) error {
 	for _, config := range configs {
 		rv := reflect.ValueOf(config.Model)
 		rv = reflect.Indirect(rv)
-		rt := rv.Type()
+		name := rv.Type().Name()
+		rt := reflect.TypeOf(config.Model)
 
 		if config.OutputFileName == "" {
-			config.OutputFileName = strcase.ToKebab(rt.Name()) + ".generated.graphql"
+			config.OutputFileName = strcase.ToKebab(name) + ".generated.graphql"
 		}
 		output, err := newGenerator(rt).Generate()
 		if err != nil {

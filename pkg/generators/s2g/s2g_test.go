@@ -184,7 +184,7 @@ func TestNewGenerator(t *testing.T) {
 
 func TestNewBatchGenerator(t *testing.T) {
 	err := NewBatchGenerator("tmp/", Config{
-		Model: Card{},
+		Model: &Card{},
 	})
 	assert.Nil(t, err, err)
 }
