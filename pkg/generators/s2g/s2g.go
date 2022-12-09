@@ -82,11 +82,23 @@ var fns = template.FuncMap{
 	},
 }
 
+// go:embed ./tpl/field_filter.tpl
+var fieldFilterTemplate string
+
+// go:embed ./tpl/model_filter.tpl
+var modelFilterTemplate string
+
+// go:embed ./tpl/model_fields.tpl
+var modelFieldsTemplate string
+
+// go:embed ./tpl/model_sort.tpl
+var modelSortTemplate string
+
 func (g generator) Generate() (string, error) {
 	sb := strings.Builder{}
 	c := g.ToTplCtx()
 
-	tpl, err := template.ParseFiles("./tpl/field_filter.tpl")
+	tpl, err := template.New("fieldFilterTemplate").Parse(fieldFilterTemplate)
 	if err != nil {
 		return "", err
 	}
@@ -98,7 +110,7 @@ func (g generator) Generate() (string, error) {
 		}
 	}
 
-	tpl, err = template.ParseFiles("./tpl/model_filter.tpl")
+	tpl, err = template.New("modelFilterTemplate").Parse(modelFilterTemplate)
 	if err != nil {
 		return "", err
 	}
@@ -108,7 +120,7 @@ func (g generator) Generate() (string, error) {
 		return "", err
 	}
 
-	tpl, err = template.ParseFiles("./tpl/model_fields.tpl")
+	tpl, err = template.New("modelFieldsTemplate").Parse(modelFieldsTemplate)
 	if err != nil {
 		return "", err
 	}
@@ -118,7 +130,7 @@ func (g generator) Generate() (string, error) {
 		return "", err
 	}
 
-	tpl, err = template.ParseFiles("./tpl/model_sort.tpl")
+	tpl, err = template.New("modelSortTemplate").Parse(modelSortTemplate)
 	if err != nil {
 		return "", err
 	}
