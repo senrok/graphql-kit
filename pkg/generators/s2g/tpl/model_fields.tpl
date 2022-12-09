@@ -1,2 +1,2 @@
 enum {{.ModelName}}Fields {
-{{range .Fields}}    {{.OriginBsonName}} {{ printf "\n" }}{{end}}}
+{{range .Fields}}    {{.OriginBsonName}}{{ printf "\n" }}{{end}}}
